@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>snip — url shortener</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --border: #2a2a2a;
+            --accent: #d4ff00;
+            --accent-dim: #9db800;
+            --text: #f0f0f0;
+            --muted: #666;
+            --error: #ff4d4d;
+            --radius: 12px;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        /* background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                    linear-gradient(var(--border) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 48px 48px;
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 640px;
+        }
+
+        header {
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -2px;
+            line-height: 1;
+            color: var(--text);
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .tagline {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        input::placeholder {
+            color: var(--muted);
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 160px;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        button {
+            width: 100%;
+            background: var(--accent);
+            color: #0a0a0a;
+            border: none;
+            border-radius: 8px;
+            padding: 0.85rem 1.5rem;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            letter-spacing: -0.02em;
+        }
+
+        button:hover { background: #c4ef00; }
+        button:active { transform: scale(0.98); }
+
+        button:disabled {
+            background: var(--border);
+            color: var(--muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* result */
+        .result {
+            margin-top: 1.5rem;
+            background: var(--bg);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.25rem;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .result.show { display: block; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .short-url {
+            font-family: 'DM Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--accent);
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .btn-copy {
+            width: auto;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            font-family: 'DM Mono', monospace;
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn-copy:hover { background: var(--accent); color: #0a0a0a; }
+
+        .result-meta {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-analytics {
+            background: transparent;
+            color: var(--muted);
+            border: none;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .btn-analytics:hover { color: var(--text); background: transparent; }
+
+        /* error */
+        .error {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--error);
+            margin-top: 0.75rem;
+            display: none;
+        }
+
+        .error.show { display: block; }
+
+        /* footer */
+        footer {
+            margin-top: 2rem;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="logo">snip<span>.</span></div>
+        <div class="tagline">// shorten. share. track.</div>
+    </header>
+
+    <div class="card">
+        <div class="row">
+            <div class="input-group" style="margin:0">
+                <label>long url</label>
+                <input type="url" id="longUrl" placeholder="https://example.com/very/long/url"/>
+            </div>
+            <div class="input-group" style="margin:0">
+                <label>expiry (days)</label>
+                <input type="number" id="expiryDays" value="30" min="1" max="365"/>
+            </div>
+        </div>
+
+        <button id="shortenBtn" onclick="shortenUrl()">Shorten →</button>
+
+        <div class="error" id="errorMsg"></div>
+
+        <div class="result" id="result">
+            <div class="result-label">your short url</div>
+            <div class="result-row">
+                <div class="short-url" id="shortUrl"></div>
+                <button class="btn-copy" onclick="copyUrl()">copy</button>
+            </div>
+            <div class="result-meta">
+                <span id="expiryInfo"></span>
+                <button class="btn-analytics" onclick="goToAnalytics()">view analytics →</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>built with spring boot + vanilla js</footer>
+</div>
+
+<script>
+    let currentShortCode = '';
+
+    async function shortenUrl() {
+        const longUrl = document.getElementById('longUrl').value.trim();
+        const expiryDays = parseInt(document.getElementById('expiryDays').value) || 30;
+        const btn = document.getElementById('shortenBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const result = document.getElementById('result');
+
+        errorMsg.classList.remove('show');
+        result.classList.remove('show');
+
+        if (!longUrl) {
+            showError('please enter a url');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'shortening...';
+
+        try {
+            const response = await fetch('/shorten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ longUrl, expiryDays })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                showError(err.message || 'invalid url — check and try again');
+                return;
+            }
+
+            const data = await response.json();
+            currentShortCode = data.shortCode;
+
+            document.getElementById('shortUrl').textContent = data.shortUrl;
+            document.getElementById('expiryInfo').textContent =
+                'expires ' + new Date(data.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            result.classList.add('show');
+            document.getElementById('longUrl').value = '';
+
+        } catch (err) {
+            showError('something went wrong — is the server running?');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Shorten →';
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.textContent = '⚠ ' + msg;
+        el.classList.add('show');
+    }
+
+    function copyUrl() {
+        const url = document.getElementById('shortUrl').textContent;
+        navigator.clipboard.writeText(url).then(() => {
+            const btn = document.querySelector('.btn-copy');
+            btn.textContent = 'copied!';
+            setTimeout(() => btn.textContent = 'copy', 2000);
+        });
+    }
+
+    function goToAnalytics() {
+        window.location.href = '/analytics.html?code=' + currentShortCode;
+    }
+
+    document.getElementById('longUrl').addEventListener('keydown', e => {
+        if (e.key === 'Enter') shortenUrl();
+    });
+</script>
+</body>
+</html>

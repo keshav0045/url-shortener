@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>snip. — analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --border: #2a2a2a;
+            --accent: #d4ff00;
+            --accent-dim: #9db800;
+            --text: #f0f0f0;
+            --muted: #666;
+            --radius: 12px;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                    linear-gradient(var(--border) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 48px 48px;
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+        }
+
+        .logo span { color: var(--accent); }
+
+        .back-btn {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--muted);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .back-btn:hover { color: var(--text); border-color: var(--text); }
+
+        /* lookup bar */
+        .lookup {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .lookup input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.7rem 1rem;
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .lookup input:focus { border-color: var(--accent); }
+        .lookup input::placeholder { color: var(--muted); }
+
+        .lookup button {
+            background: var(--accent);
+            color: #0a0a0a;
+            border: none;
+            border-radius: 8px;
+            padding: 0.7rem 1.25rem;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .lookup button:hover { background: #c4ef00; }
+
+        /* stat cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .stat-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        /* charts grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .chart-card.full {
+            grid-column: 1 / -1;
+        }
+
+        .chart-title {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 1.25rem;
+        }
+
+        canvas {
+            max-height: 220px;
+        }
+
+        /* empty / loading */
+        .empty {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--muted);
+            font-family: 'DM Mono', monospace;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .empty.show { display: block; }
+
+        .dashboard { display: none; }
+        .dashboard.show { display: block; }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--muted);
+            display: none;
+        }
+
+        .loading.show { display: block; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="logo">snip<span>.</span> analytics</div>
+        <a href="/index.html" class="back-btn">← shorten a url</a>
+    </header>
+
+    <div class="lookup">
+        <input type="text" id="codeInput" placeholder="enter short code e.g. 111"/>
+        <button onclick="loadAnalytics()">fetch →</button>
+    </div>
+
+    <div class="loading" id="loading">fetching data...</div>
+    <div class="empty" id="empty">no data found for that short code.</div>
+
+    <div class="dashboard" id="dashboard">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">total clicks</div>
+                <div class="stat-value" id="totalClicks">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">top browser</div>
+                <div class="stat-value" id="topBrowser" style="font-size:1.4rem">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">top os</div>
+                <div class="stat-value" id="topOs" style="font-size:1.4rem">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">top device</div>
+                <div class="stat-value" id="topDevice" style="font-size:1.4rem">—</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card full">
+                <div class="chart-title">// clicks per day</div>
+                <canvas id="clicksChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">// browser breakdown</div>
+                <canvas id="browserChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">// device breakdown</div>
+                <canvas id="deviceChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // chart instances to destroy before re-render
+    let clicksChart, browserChart, deviceChart;
+
+    const CHART_COLORS = ['#d4ff00', '#a8cc00', '#7d9900', '#526600', '#2a3300'];
+    const GRID_COLOR = '#2a2a2a';
+    const TEXT_COLOR = '#666';
+
+    // auto-load if code is in URL params
+    window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        if (code) {
+            document.getElementById('codeInput').value = code;
+            loadAnalytics();
+        }
+    });
+
+    async function loadAnalytics() {
+        const code = document.getElementById('codeInput').value.trim();
+        if (!code) return;
+
+        document.getElementById('loading').classList.add('show');
+        document.getElementById('dashboard').classList.remove('show');
+        document.getElementById('empty').classList.remove('show');
+
+        try {
+            const res = await fetch(`/analytics/${code}`);
+            if (!res.ok) throw new Error('not found');
+            const data = await res.json();
+
+            document.getElementById('loading').classList.remove('show');
+
+            if (data.totalClicks === 0) {
+                document.getElementById('empty').textContent = 'no clicks recorded yet for this short code.';
+                document.getElementById('empty').classList.add('show');
+                return;
+            }
+
+            renderDashboard(data);
+
+        } catch (e) {
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('empty').textContent = 'no data found for that short code.';
+            document.getElementById('empty').classList.add('show');
+        }
+    }
+
+    function topKey(obj) {
+        return Object.entries(obj).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+    }
+
+    function renderDashboard(data) {
+        // stat cards
+        document.getElementById('totalClicks').textContent = data.totalClicks;
+        document.getElementById('topBrowser').textContent = topKey(data.browserBreakdown);
+        document.getElementById('topOs').textContent = topKey(data.osBreakdown || {});
+        document.getElementById('topDevice').textContent = topKey(data.deviceBreakdown);
+
+        // destroy old charts
+        if (clicksChart) clicksChart.destroy();
+        if (browserChart) browserChart.destroy();
+        if (deviceChart)  deviceChart.destroy();
+
+        // clicks per day — line chart
+        const days = Object.keys(data.clicksPerDay).sort();
+        const counts = days.map(d => data.clicksPerDay[d]);
+
+        clicksChart = new Chart(document.getElementById('clicksChart'), {
+            type: 'line',
+            data: {
+                labels: days,
+                datasets: [{
+                    data: counts,
+                    borderColor: '#d4ff00',
+                    backgroundColor: 'rgba(212,255,0,0.08)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#d4ff00',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: TEXT_COLOR, font: { family: 'DM Mono', size: 11 } }, grid: { color: GRID_COLOR } },
+                    y: { ticks: { color: TEXT_COLOR, font: { family: 'DM Mono', size: 11 } }, grid: { color: GRID_COLOR }, beginAtZero: true }
+                }
+            }
+        });
+
+        // browser doughnut
+        browserChart = makeDoughnut('browserChart', data.browserBreakdown);
+
+        // device doughnut
+        deviceChart = makeDoughnut('deviceChart', data.deviceBreakdown);
+
+        document.getElementById('dashboard').classList.add('show');
+    }
+
+    function makeDoughnut(id, obj) {
+        const labels = Object.keys(obj);
+        const values = Object.values(obj);
+        return new Chart(document.getElementById(id), {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: CHART_COLORS,
+                    borderColor: '#141414',
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: TEXT_COLOR, font: { family: 'DM Mono', size: 11 }, padding: 12, boxWidth: 12 }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    document.getElementById('codeInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') loadAnalytics();
+    });
+</script>
+</body>
+</html>

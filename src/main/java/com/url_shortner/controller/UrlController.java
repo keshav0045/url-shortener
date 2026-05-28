@@ -24,7 +24,7 @@ public class UrlController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{shortCode}")
+    @GetMapping("/{shortCode:^[a-zA-Z0-9]+$}")
     public ResponseEntity<Void> redirect(@PathVariable String shortCode, HttpServletRequest request) {
         String longUrl = urlService.getOriginalUrl(shortCode, request);
         return ResponseEntity.status(HttpStatus.FOUND)

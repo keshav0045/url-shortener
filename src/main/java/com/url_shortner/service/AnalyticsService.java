@@ -23,14 +23,13 @@ public class AnalyticsService {
     private final Parser uaParser =  new Parser();
 
     @Async
-    public void logClick(String shortCode, HttpServletRequest request) {
-        String userAgent = request.getHeader("User-Agent");
+    public void logClick(String shortCode, String ipAddress, String userAgent) {
         Client client = uaParser.parse(userAgent);
 
         Click click = Click.builder()
                 .shortCode(shortCode)
                 .clickedAt(LocalDateTime.now())
-                .ipAdress(request.getRemoteAddr())
+                .ipAddress(ipAddress)
                 .browser(client.userAgent.family)
                 .os(client.os.family)
                 .device(client.device.family)

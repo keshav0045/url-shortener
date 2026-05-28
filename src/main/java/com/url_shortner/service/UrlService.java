@@ -50,7 +50,11 @@ public class UrlService {
             throw new RuntimeException("Short URL has expired");
         }
 
-        analyticsService.logClick(shortCode, request);
+
+        String ipAddress = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+
+        analyticsService.logClick(shortCode, ipAddress, userAgent);
 
         return url.getLongUrl();
     }

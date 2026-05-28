@@ -28,7 +28,7 @@ public class Click {
     private LocalDateTime clickedAt;
 
     @Column(name = "ip_adress", length = 45)
-    private String ipAdress;
+    private String ipAddress;
 
     @Column(name = "browser", length = 100)
     private String browser;
