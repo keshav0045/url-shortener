@@ -25,6 +25,9 @@ Shorten long URLs, share them, and track click analytics in real time.
 - Vanilla JS
 - Chart.js
 
+**Caching**
+- Redis
+
 ## Project Structure
 
 ```
@@ -114,3 +117,11 @@ Response:
 4. When someone visits the short URL, server responds with a 302 redirect
 5. Click is logged asynchronously (non-blocking) with browser, OS, and device info parsed from the User-Agent header
 
+
+## Future Improvements
+
+- JWT authentication for private/protected URLs
+- Rate limiting per IP to prevent abuse
+- Custom alias support (e.g. snip/my-link)
+- QR code generation for each short URL
+- Geographic analytics (country breakdown)
